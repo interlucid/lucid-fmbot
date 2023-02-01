@@ -1,0 +1,31 @@
+{
+  "name": "lucid-fmbot",
+  "version": "0.0.1",
+  "description": "a Discord.js bot that implements some missing features of .fmbot",
+  "main": "main.js",
+  "scripts": {
+    "start": "node app/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "nodemon -L app/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/interlucid/lucid-fmbot.git"
+  },
+  "keywords": [
+    "interlucid"
+  ],
+  "author": "Brandon der Blätter",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/interlucid/lucid-fmbot/issues"
+  },
+  "homepage": "https://github.com/interlucid/lucid-fmbot#readme",
+  "dependencies": {
+    "discord.js": "^14.7.1",
+    "dotenv": "^16.0.3",
+    "lastfm": "^0.9.4",
+    "mongodb": "^4.13.0",
+    "nodemon": "^2.0.20"
+  }
+}
