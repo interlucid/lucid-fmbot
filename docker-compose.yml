@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  mongo:
+    restart: always
+    image: mongo
+    ports:
+      - 27020:27017
+    volumes:
+      - mongodb:/data/db
+
+  # node:
+  #   restart: always
+  #   build: .
+  #   ports:
+  #     - 3003:3000
+  #   depends_on:
+  #     - mongo
+
+volumes:
+  mongodb:

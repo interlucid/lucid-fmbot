@@ -1,27 +1,28 @@
-const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
-require('dotenv').config({path: `${__dirname}/../.env`});
-const commands = require('./commands');
+import { Client, Collection, Events, GatewayIntentBits, BaseInteraction } from 'discord.js';
 
-// Create a new client instance
+import { CommandImport, commandImports } from '~/commands/index';
+import '~/load-env';
+
+// create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.commands = new Collection();
+const commands: Collection<string, CommandImport> = new Collection();
 
-console.log(JSON.stringify(commands, null, 4))
-for(command of Object.values(commands)) {
-    client.commands.set(command.data.name, command);
+// console.log(JSON.stringify(commandImports, null, 4))
+for(let commandImport of Object.values(commandImports)) {
+    commands.set(commandImport.data.name, commandImport);
 }
 
 // When the client is ready, run this code (only once)
 // We use 'c' for the event parameter to keep it separate from the already defined 'client'
-client.once(Events.ClientReady, c => {
+client.once(Events.ClientReady, (c: any) => {
 	console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
 
-	const command = interaction.client.commands.get(interaction.commandName);
+	const command = commands.get(interaction.commandName);
 
 	if (!command) {
 		console.error(`No command matching ${interaction.commandName} was found.`);

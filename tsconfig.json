@@ -1,0 +1,26 @@
+{
+    // "ts-node": {
+    //     "require": ["tsconfig-paths/register"],
+    //     "swc": true,
+    //     "esm": true,
+    // },
+    "compilerOptions": {
+        "module": "ES2022",
+        "moduleResolution": "node",
+        "target": "ES2015",
+        "esModuleInterop": true,
+        "noImplicitAny": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "sourceMap": true,
+        "baseUrl": ".",
+        "paths": {
+            "~/*": [
+                "./app/*"
+            ],
+        },
+        "outDir": "dist",
+    },
+    "include": ["./app/**/*"],
+    "exclude": ["node_modules", "**/*.spec.ts"],
+}
