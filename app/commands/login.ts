@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, SlashCommandBooleanOption, ChatInputCommandInteraction } from 'discord.js';
 
 import * as lastfmInternal from '~/libraries/lastfm-internal';
 import * as mongodbInternal from '~/libraries/mongodb-internal';
@@ -6,20 +6,29 @@ import '~/types/command-types';
 
 export const data = new SlashCommandBuilder()
     .setName('login')
-    .setDescription('Log into Last.fm');
+    .setDescription('Log into Last.fm')
+    .addBooleanOption(new SlashCommandBooleanOption()
+        .setName('force')
+        .setDescription(`Forces login process to retrieve a new session even if you've logged in before`));
     
 export const execute = async (interaction: ChatInputCommandInteraction) => {
-    try {
-        // if already logged in, let the user know
-        const storedUser = await mongodbInternal.getUserByDiscordId(interaction.member.user.id) as unknown as mongodbInternal.StoredUser;
-        console.log(JSON.stringify(storedUser, null, 4))
-        const lastFmSessionData = await lastfmInternal.verifySession(storedUser);
-        console.log(JSON.stringify(lastFmSessionData, null, 4))
-        
-    } catch (e) {
-        console.log(e, `error creating session but this might be just because this user hasn't logged in before`)
+    if(!interaction.options.getBoolean('force')) {
+        try {
+            // if already logged in, let the user know
+            const storedUser = await mongodbInternal.getUserByDiscordId(interaction.member.user.id) as unknown as mongodbInternal.StoredUser;
+            if(storedUser?.lastfmSessionKey) {
+                await interaction.reply({
+                    content: `It looks like you're already logged in. If you're having problems you can try this command again with \`force = true\`*\n\n*this actually doesn't work at the moment so just ping Interlucid to help for now`,
+                    ephemeral: true,
+                });
+            }
+            // console.log(JSON.stringify(storedUser, null, 4))
+            console.dir(storedUser)
+            return;
+        } catch (e) {
+            console.log(e, `didn't find user in the database but it's probably fine because this may be their first time logging in`)
+        }
     }
-    
 
     let lastfmTokenData;
     try {

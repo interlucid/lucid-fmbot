@@ -4,7 +4,10 @@ import { fileURLToPath } from 'url';
 export default {
     target: 'node19',
     mode: 'development',
-    entry: './app/main.ts',
+    entry: {
+        main: './app/main.ts',
+        registerCommands: './app/register-commands.ts',
+    },
     module: {
         rules: [
             {
@@ -21,11 +24,16 @@ export default {
             'underscore': 'underscore/underscore.js',
         },
     },
+    ignoreWarnings: [
+        {
+            module: /node_modules/
+        },
+    ],
     experiments: {
         outputModule: true,
     },
     output: {
-        filename: 'app.js',
+        filename: '[name].js',
         path: path.resolve(dirname(fileURLToPath(import.meta.url)), 'dist'),
         library: {
             type: 'module',
