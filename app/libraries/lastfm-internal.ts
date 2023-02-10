@@ -1,6 +1,5 @@
 import { LastFmNode } from 'lastfm';
 
-import type { StoredUser } from '~/libraries/mongodb-internal'
 import '~/load-env';
 
 export interface TokenData {
@@ -102,7 +101,7 @@ interface LastfmTrack {
         '#text': string;
     }
     date: {
-
+        uts: string
     }
 }
 
@@ -156,7 +155,7 @@ export const getUserMonthlyStreamsForArtist = (lastfmUser: string, artist: strin
         // fetch every page
         let lastPage = 999999999;
         for(let page = 1; page <= lastPage; page++) {
-        // for(let page = 1; page <= 8; page++) {
+        // for(let page = 1; page <= Math.min(8, lastPage); page++) {
             console.log(`fetching page ${page} of ${lastPage} for lastfmUser ${lastfmUser} from ${ Math.round(fromTime.getTime() / 1000) } to ${ Math.round(endTime.getTime() / 1000) }`)
             // from time and end time expect number of seconds, not milliseconds, from UNIX epoch
             const trackResponse = await requestRecentUserStreamsByPage(lastfmUser, Math.round(fromTime.getTime() / 1000), Math.round(endTime.getTime() / 1000), page)
@@ -165,12 +164,55 @@ export const getUserMonthlyStreamsForArtist = (lastfmUser: string, artist: strin
             aggregateStreams = [...aggregateStreams, ...trackResponse.recenttracks.track];
         }
         const lowerCaseArtist = artist.toLowerCase();
+
+        // if there are more than 200 streams in a day (10 hours) assume scrobbles were imported that day and divide the scrobbles by the average of the other days
+
+        // build day array
+        let daysStreamed: { [key: string]: LastfmTrack[] } = {};
+        for(let track of aggregateStreams) {
+            // skip songs if no date is found (for example, if it is playing now)
+            if(!track.date) {
+                // console.log(`track has no date, continuing...`)
+                continue;
+            }
+            // console.dir(track, track.date);
+            const dateStreamed = (new Date(parseInt(track.date.uts) * 1000)).toLocaleDateString('en-US', { timeZone: 'UTC' })
+            daysStreamed[dateStreamed] = daysStreamed[dateStreamed] ?? [];
+            daysStreamed[dateStreamed].push(track);
+            // console.log(`pushed track streamed on ${ dateStreamed } to array`)
+        }
+        console.log(`days streamed is`)
+        for(let day in daysStreamed) {
+            console.log(`streams: ${ day }, ${ daysStreamed[day].length }`);
+        }
+
+        const maxStreamsInANormalDay = 250;
+        const normalDays = Object.values(daysStreamed)
+            .filter(day => day.length < maxStreamsInANormalDay);
+        const averageNormalDayStreams = normalDays
+            .reduce((prev, cur: LastfmTrack[]) => prev + cur.length, 0)
+            / Math.max(normalDays.length, 1);
+        console.log(`normal days length is ${normalDays.length} and averageNormalDayStreams is ${averageNormalDayStreams}`)
+        const normalizedStreamCount = Object.values(daysStreamed)
+            .reduce((acc, cur) => {
+                const totalTrackCount = cur.length;
+                const artistTrackCount = cur.filter(track => track.artist['#text'].toLowerCase().includes(lowerCaseArtist)).length;
+                const normalizedArtistTrackCount = totalTrackCount > maxStreamsInANormalDay ?
+                    // if we guess the user is uploading scrobbles, take the percentage of artist streams from the upload
+                    //  and apply it to an average day stream count, avoiding divide by 0 errors
+                    Math.round(artistTrackCount / Math.max((totalTrackCount / Math.max(averageNormalDayStreams, .1)), 1)) :
+                    artistTrackCount
+                return acc + normalizedArtistTrackCount;
+            }, 0)
+
+        
         const filteredStreams = aggregateStreams
             .filter((track: LastfmTrack) => {
                 // if(track.artist['#text'].toLowerCase().includes(lowerCaseArtist)) console.log(`found interlucid track: ${JSON.stringify(track.date, null, 4)}`)
                 return track.artist['#text'].toLowerCase().includes(lowerCaseArtist)
             })
-        resolve(filteredStreams.length);
+        console.log(`about to resolve normalized stream count of ${ normalizedStreamCount } instead of raw stream count of ${ filteredStreams.length } for Last.fm user ${ lastfmUser }`)
+        resolve(normalizedStreamCount);
         // resolve(0);
     })
 }

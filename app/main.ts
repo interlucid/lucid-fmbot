@@ -1,6 +1,7 @@
 import { Client, Collection, Events, GatewayIntentBits, BaseInteraction } from 'discord.js';
 
 import { CommandImport, commandImports } from '~/commands/index';
+import * as cronInternal from '~/libraries/cron-internal';
 import '~/load-env';
 
 // create a new client instance
@@ -15,8 +16,9 @@ for(let commandImport of Object.values(commandImports)) {
 
 // When the client is ready, run this code (only once)
 // We use 'c' for the event parameter to keep it separate from the already defined 'client'
-client.once(Events.ClientReady, (c: any) => {
-	console.log(`Ready! Logged in as ${c.user.tag}`);
+client.once(Events.ClientReady, (client: any) => {
+	console.log(`Ready! Logged in as ${client.user.tag}`);
+	cronInternal.startCurrentMonthUpdateJob(client);
 });
 
 client.on(Events.InteractionCreate, async interaction => {

@@ -51,11 +51,14 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 		// just refresh all guilds that we're logged into; if this bot becomes super famous at some point optimize it
 		for(const guildTuple of client.guilds.cache) {
 			// The put method is used to fully refresh all commands in the guild with the current set
-			const data = await rest.put(
+			rest.put(
 				Routes.applicationGuildCommands(client.user.id, guildTuple[1].id),
 				{ body: commands },
 			);
 		}
+
+		// get rid of any global commands
+		// client.application.commands.set([]);
 
 		console.log(`Successfully reloaded ${commands.length} application (/) commands in ${client.guilds.cache.size} guilds.`);
 	} catch (error) {

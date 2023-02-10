@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 
+import * as config from './config';
 import * as login from './login';
 import * as leaderboard from './leaderboard';
 
@@ -9,6 +10,7 @@ export interface CommandImport {
 }
 
 export const commandImports: CommandImport[] = [
+    config,
     login,
     leaderboard,
 ]

@@ -10,6 +10,7 @@ const dbName = 'lucid-fm-bot';
 let db = null;
 let usersCollection: Collection = null;
 let monthlyLeaderboardsCollection: Collection = null;
+let serverConfigCollection: Collection = null;
 
 export const getUTCMonthYearString = (month?: number, year?: number) => {
     const dbYear = year ?? (new Date).getUTCFullYear();
@@ -24,7 +25,11 @@ const dbInit = async () => {
         db = dbClient.db(dbName);
         usersCollection = db.collection('users');
         monthlyLeaderboardsCollection = db.collection('monthlyLeaderboards');
+        serverConfigCollection = db.collection('serverConfig');
         console.log('Successfully connected to database');
+        // initialize serverConfig
+        const serverConfig = await getConfig();
+        if(!serverConfig) setConfig({})
     } catch (e) {
         console.error('Error connecting to database')
         throw e;
@@ -41,7 +46,7 @@ export interface StoredUser {
 }
 
 export interface LeaderboardDatum {
-    storedUserId: ObjectId;
+    userDiscordId: string;
     streamsThisMonth: number;
 }
 
@@ -49,6 +54,10 @@ export interface LeaderboardResult {
     month: string,
     leaderboardData: LeaderboardDatum[],
     updated: number,
+}
+
+export interface Config {
+    [name: string]: string,
 }
 
 // adds user to the database
@@ -92,6 +101,22 @@ export const updateMonthlyLeaderboard = async (data: LeaderboardDatum[], month?:
             updated: Date.now(),
             leaderboardData: data,
         }
+    }, {
+        upsert: true,
+    })
+}
+
+export const getConfig = async () => {
+    return serverConfigCollection.findOne({
+        _id: 1,
+    })
+}
+
+export const setConfig = async (config: Config) => {
+    return serverConfigCollection.updateOne({
+        _id: 1,
+    }, {
+        $set: config,
     }, {
         upsert: true,
     })

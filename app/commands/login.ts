@@ -18,13 +18,14 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
             const storedUser = await mongodbInternal.getUserByDiscordId(interaction.member.user.id) as unknown as mongodbInternal.StoredUser;
             if(storedUser?.lastfmSessionKey) {
                 await interaction.reply({
-                    content: `It looks like you're already logged in. If you're having problems you can try this command again with \`force = true\`*\n\n*this actually doesn't work at the moment so just ping Interlucid to help for now`,
+                    content: `It looks like you're already logged in. If you're having problems you can try this command again with \`force = true\``,
                     ephemeral: true,
                 });
+                return;
             }
             // console.log(JSON.stringify(storedUser, null, 4))
+            console.log(`stored user is`)
             console.dir(storedUser)
-            return;
         } catch (e) {
             console.log(e, `didn't find user in the database but it's probably fine because this may be their first time logging in`)
         }
