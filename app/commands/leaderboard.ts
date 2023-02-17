@@ -1,4 +1,5 @@
 import { GuildMember, SlashCommandBuilder, SlashCommandBooleanOption, EmbedBuilder, PermissionsBitField, ChatInputCommandInteraction } from 'discord.js';
+import { DateTime } from 'luxon';
 
 import * as mongodbInternal from '~/libraries/mongodb-internal';
 import * as leaderboardLib from '~/libraries/leaderboard-lib';
@@ -32,18 +33,24 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
         embeds: [
             replyEmbed
         ],
-        ephemeral: true,
+        // ephemeral: true,
     });
 
     // fetch the leaderboard; only use the user cache option if it's explicitly set
-    const leaderboardText = await leaderboardLib.getMonthlyLeaderboardText(interaction.guild, userUseCache === null ? true : userUseCache);
+    const leaderboardResponse = await leaderboardLib.getMonthlyLeaderboardData(interaction.guild, userUseCache === null ? true : userUseCache);
+    const storedLastfmUsers = await mongodbInternal.getAllUsers();
+
+    // give the current top streamer the Monthly Streaming Heir role
+    // we can use the first index of the leaderboardData array since it's sorted
+    // only add the heir role if the leader has more than 0 streams
+    leaderboardLib.updateSingletonRole(await interaction.guild.members.fetch(leaderboardResponse.leaderboardData[0].userDiscordId), storedConfig.heir_role, storedLastfmUsers, leaderboardResponse.leaderboardData[0].streamsThisMonth > 0)
 
     replyEmbed
-        .setTitle(`Monthly Streaming Monarch Leaderboard - ${ new Date().toLocaleString('default', { month: 'long' }) }`)
-        .setDescription(leaderboardText.text)
+        .setTitle(`Monthly Streaming Heir Leaderboard - ${ DateTime.utc().toLocaleString({ year: 'numeric', month: 'long' }) }`)
+        .setDescription(leaderboardResponse.text)
     
     // let users know about the cache if they utilize it
-    if(!leaderboardText.cacheExpired) {
+    if(!leaderboardResponse.cacheExpired) {
         replyEmbed
             .setFooter({
                 text: `Data not updating? Results are cached for five minutes to reduce load on Last.fm API.`,

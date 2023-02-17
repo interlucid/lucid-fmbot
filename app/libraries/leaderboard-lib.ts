@@ -1,10 +1,11 @@
 import { GuildMember, Guild } from 'discord.js';
+import { DateTime } from 'luxon';
 
 import * as lastfmInternal from '~/libraries/lastfm-internal';
 import * as mongodbInternal from '~/libraries/mongodb-internal';
 
 // give a role that only one member can have to this member
-const giveSingletonRole = async (member: GuildMember, roleId: string, users: mongodbInternal.StoredUser[]) => {
+export const updateSingletonRole = async (member: GuildMember, roleId: string, users: mongodbInternal.StoredUser[], addRole = true) => {
     // assume if the given member has the role no one else has it
     if(member.roles.cache.find(role => role.id === roleId)) return;
 
@@ -15,18 +16,23 @@ const giveSingletonRole = async (member: GuildMember, roleId: string, users: mon
     }
 
     // add the role
-    member.roles.add(roleId);
+    if(addRole) {
+        member.roles.add(roleId);
+    }
 }
 
 // use the cache by default
-export const getMonthlyLeaderboardText = async (guild: Guild, useCache = true) => {
+export const getMonthlyLeaderboardData = async (
+    guild: Guild,
+    useCache = true,
+    month = parseInt(DateTime.utc().toFormat('L')),
+    year = parseInt(DateTime.utc().toFormat('y')),
+) => {
     const storedConfig = await mongodbInternal.getConfig();
 
     // get all the Last.fm users in the database
     const storedLastfmUsers = await mongodbInternal.getAllUsers();
     // console.log(JSON.stringify(storedLastfmUsers, null, 4));
-    const year = (new Date).getUTCFullYear();
-    const month = (new Date).getUTCMonth();
 
     let leaderboardResult: mongodbInternal.LeaderboardResult = {
         month: mongodbInternal.getUTCMonthYearString(month, year),
@@ -44,7 +50,7 @@ export const getMonthlyLeaderboardText = async (guild: Guild, useCache = true) =
     }
 
     let leaderboardData: mongodbInternal.LeaderboardDatum[] = leaderboardResult.leaderboardData;
-    const cacheExpired = Date.now() - leaderboardResult.updated > 300000;
+    const cacheExpired = DateTime.utc().toMillis() - leaderboardResult.updated > 300000;
     // only fetch new data from lastfm if more than five minutes has passed from the last fetch
     if(cacheExpired) {
         for(let user of storedLastfmUsers) {
@@ -67,10 +73,6 @@ export const getMonthlyLeaderboardText = async (guild: Guild, useCache = true) =
     // cache in database
     mongodbInternal.updateMonthlyLeaderboard(leaderboardData);
 
-    // give the current top streamer the Monthly Streaming Heir role
-    // we can use the first index of the leaderboardData array since it's sorted
-    giveSingletonRole(await guild.members.fetch(leaderboardData[0].userDiscordId), storedConfig.heir_role, storedLastfmUsers)
-
     // assemble data
     const text = `
     
@@ -79,13 +81,14 @@ ${(await Promise.all(leaderboardData
         .map(async (leaderboardDatum, index) => {
             const guildMember =  (await guild.members.fetch(storedLastfmUsers.find(user => user.discordId === leaderboardDatum.userDiscordId).discordId))
             return `${index === 0 ? '👑 ' : `${index + 1}.`} [${
-                    guildMember.nickname ?? guildMember.user.username
+                    guildMember.displayName
                 }](https://last.fm/user/${ storedLastfmUsers.find(user => user.discordId === leaderboardDatum.userDiscordId).lastfmUsername }) - **${ leaderboardDatum.streamsThisMonth }** ${storedConfig.artist_name} play${ leaderboardDatum.streamsThisMonth === 1 ? '' : 's' }\n`
             })))
         .join('')}
 `;
     return {
         text,
-        cacheExpired
+        cacheExpired,
+        leaderboardData,
     }
 }

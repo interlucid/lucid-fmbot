@@ -19,6 +19,7 @@ for(let commandImport of Object.values(commandImports)) {
 client.once(Events.ClientReady, (client: any) => {
 	console.log(`Ready! Logged in as ${client.user.tag}`);
 	cronInternal.startCurrentMonthUpdateJob(client);
+	cronInternal.startLastMonthFinalCountJob(client);
 });
 
 client.on(Events.InteractionCreate, async interaction => {

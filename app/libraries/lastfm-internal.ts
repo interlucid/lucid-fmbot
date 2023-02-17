@@ -1,4 +1,5 @@
 import { LastFmNode } from 'lastfm';
+import { DateTime } from 'luxon';
 
 import '~/load-env';
 
@@ -144,21 +145,22 @@ export const getUserMonthlyStreamsForArtist = (lastfmUser: string, artist: strin
         ) {
             reject(`month or year format invalid (not a whole number, not a usable month or year, etc.)`)
         }
-        const firstMillisecondOfMonth = Date.UTC(year, month);
-        const lastMillisecondOfMonth = new Date(Date.UTC(year, month + 1, 0)).setUTCHours(23,59,59,999);
+        const firstMillisecondOfMonth = DateTime.utc(year, month).toMillis();
+        const lastMillisecondOfMonth = DateTime.utc(year, month + 1).minus({millisecond: 1}).toMillis();
         // don't fetch data that we already have in the database
-        const fromTime = new Date(Math.max(updated, firstMillisecondOfMonth));
+        const fromTime = DateTime.fromMillis(Math.max(updated, firstMillisecondOfMonth));
         // don't let end time be past the current time
-        const endTime = new Date(Math.min(Date.now(), lastMillisecondOfMonth));
-        console.log(`from time is ${fromTime.toUTCString()} and end time is ${endTime.toUTCString()}`)
+        const endTime = DateTime.fromMillis(Math.min(DateTime.utc().toMillis(), lastMillisecondOfMonth));
+        console.log(`month is ${month} and year is ${year}`)
+        console.log(`from time is ${fromTime.toUTC()} and end time is ${endTime.toUTC()}`)
         let aggregateStreams: LastfmTrack[] = []
         // fetch every page
         let lastPage = 999999999;
         for(let page = 1; page <= lastPage; page++) {
         // for(let page = 1; page <= Math.min(8, lastPage); page++) {
-            console.log(`fetching page ${page} of ${lastPage} for lastfmUser ${lastfmUser} from ${ Math.round(fromTime.getTime() / 1000) } to ${ Math.round(endTime.getTime() / 1000) }`)
+            console.log(`fetching page ${page} of ${lastPage} for lastfmUser ${lastfmUser} from ${ fromTime.setZone('utc').toLocaleString(DateTime.DATETIME_FULL) } to ${ endTime.setZone('utc').toLocaleString(DateTime.DATETIME_FULL) }`)
             // from time and end time expect number of seconds, not milliseconds, from UNIX epoch
-            const trackResponse = await requestRecentUserStreamsByPage(lastfmUser, Math.round(fromTime.getTime() / 1000), Math.round(endTime.getTime() / 1000), page)
+            const trackResponse = await requestRecentUserStreamsByPage(lastfmUser, Math.round(fromTime.toSeconds(),), Math.round(endTime.toSeconds()), page)
             lastPage = parseInt(trackResponse.recenttracks['@attr'].totalPages);
             await timeout(1500);
             aggregateStreams = [...aggregateStreams, ...trackResponse.recenttracks.track];
@@ -176,7 +178,7 @@ export const getUserMonthlyStreamsForArtist = (lastfmUser: string, artist: strin
                 continue;
             }
             // console.dir(track, track.date);
-            const dateStreamed = (new Date(parseInt(track.date.uts) * 1000)).toLocaleDateString('en-US', { timeZone: 'UTC' })
+            const dateStreamed = DateTime.fromSeconds(parseInt(track.date.uts)).setLocale('utc').toLocaleString(DateTime.DATE_SHORT);
             daysStreamed[dateStreamed] = daysStreamed[dateStreamed] ?? [];
             daysStreamed[dateStreamed].push(track);
             // console.log(`pushed track streamed on ${ dateStreamed } to array`)
