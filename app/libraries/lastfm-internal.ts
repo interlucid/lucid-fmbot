@@ -97,7 +97,7 @@ interface LastfmTrackResponse {
     }
 }
 
-interface LastfmTrack {
+export interface LastfmTrack {
     artist: {
         '#text': string;
     }
@@ -133,7 +133,7 @@ const timeout = (ms: number) => {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export const getUserMonthlyStreamsForArtist = (lastfmUser: string, artist: string, updated: number, month: number, year: number): Promise<number> => {
+export const getUserMonthlyStreams = (lastfmUser: string, updated: number, month: number, year: number): Promise<LastfmTrack[]> => {
     return new Promise(async (resolve, reject) => {
         if(
             month % 1 != 0 ||
@@ -165,56 +165,7 @@ export const getUserMonthlyStreamsForArtist = (lastfmUser: string, artist: strin
             await timeout(1500);
             aggregateStreams = [...aggregateStreams, ...trackResponse.recenttracks.track];
         }
-        const lowerCaseArtist = artist.toLowerCase();
 
-        // if there are more than 200 streams in a day (10 hours) assume scrobbles were imported that day and divide the scrobbles by the average of the other days
-
-        // build day array
-        let daysStreamed: { [key: string]: LastfmTrack[] } = {};
-        for(let track of aggregateStreams) {
-            // skip songs if no date is found (for example, if it is playing now)
-            if(!track.date) {
-                // console.log(`track has no date, continuing...`)
-                continue;
-            }
-            // console.dir(track, track.date);
-            const dateStreamed = DateTime.fromSeconds(parseInt(track.date.uts)).setLocale('utc').toLocaleString(DateTime.DATE_SHORT);
-            daysStreamed[dateStreamed] = daysStreamed[dateStreamed] ?? [];
-            daysStreamed[dateStreamed].push(track);
-            // console.log(`pushed track streamed on ${ dateStreamed } to array`)
-        }
-        console.log(`days streamed is`)
-        for(let day in daysStreamed) {
-            console.log(`streams: ${ day }, ${ daysStreamed[day].length }`);
-        }
-
-        const maxStreamsInANormalDay = 250;
-        const normalDays = Object.values(daysStreamed)
-            .filter(day => day.length < maxStreamsInANormalDay);
-        const averageNormalDayStreams = normalDays
-            .reduce((prev, cur: LastfmTrack[]) => prev + cur.length, 0)
-            / Math.max(normalDays.length, 1);
-        console.log(`normal days length is ${normalDays.length} and averageNormalDayStreams is ${averageNormalDayStreams}`)
-        const normalizedStreamCount = Object.values(daysStreamed)
-            .reduce((acc, cur) => {
-                const totalTrackCount = cur.length;
-                const artistTrackCount = cur.filter(track => track.artist['#text'].toLowerCase().includes(lowerCaseArtist)).length;
-                const normalizedArtistTrackCount = totalTrackCount > maxStreamsInANormalDay ?
-                    // if we guess the user is uploading scrobbles, take the percentage of artist streams from the upload
-                    //  and apply it to an average day stream count, avoiding divide by 0 errors
-                    Math.round(artistTrackCount / Math.max((totalTrackCount / Math.max(averageNormalDayStreams, .1)), 1)) :
-                    artistTrackCount
-                return acc + normalizedArtistTrackCount;
-            }, 0)
-
-        
-        const filteredStreams = aggregateStreams
-            .filter((track: LastfmTrack) => {
-                // if(track.artist['#text'].toLowerCase().includes(lowerCaseArtist)) console.log(`found interlucid track: ${JSON.stringify(track.date, null, 4)}`)
-                return track.artist['#text'].toLowerCase().includes(lowerCaseArtist)
-            })
-        console.log(`about to resolve normalized stream count of ${ normalizedStreamCount } instead of raw stream count of ${ filteredStreams.length } for Last.fm user ${ lastfmUser }`)
-        resolve(normalizedStreamCount);
-        // resolve(0);
+        resolve(aggregateStreams);
     })
 }

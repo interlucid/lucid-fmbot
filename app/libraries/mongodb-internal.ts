@@ -1,4 +1,7 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb';
+import { DateTime } from 'luxon';
+
+import { LastfmTrack } from '~/libraries/lastfm-internal';
 
 import '~/load-env';
 
@@ -12,10 +15,10 @@ let usersCollection: Collection = null;
 let monthlyLeaderboardsCollection: Collection = null;
 let serverConfigCollection: Collection = null;
 
-export const getUTCMonthYearString = (month?: number, year?: number) => {
-    const dbYear = year ?? (new Date).getUTCFullYear();
-    const dbMonth = month ?? (new Date).getUTCMonth();
-    return `${ dbYear }-${ String(dbMonth).padStart(2, '0') }`;
+export const getUTCMonthYearString = (month: string, year: string) => {
+    // console.log(`input month and year are ${ year }-${ month }`)
+    console.log(`utc month string is ${ year }-${ month }`)
+    return `${ year }-${ month }`;
 }
 
 const dbInit = async () => {
@@ -47,7 +50,8 @@ export interface StoredUser {
 
 export interface LeaderboardDatum {
     userDiscordId: string;
-    streamsThisMonth: number;
+    serverArtistNormalizedStreamsThisMonth: number;
+    streamData: LastfmTrack[];
 }
 
 export interface LeaderboardResult {
@@ -83,7 +87,7 @@ export const getAllUsers = async () => {
     return usersCollection.find().toArray() as unknown as Promise<StoredUser[]>;
 }
 
-export const getMonthlyLeaderboard = async (month?: number, year?: number): Promise<LeaderboardResult> => {
+export const getMonthlyLeaderboard = async (month: string, year: string): Promise<LeaderboardResult> => {
     const monthYearString = getUTCMonthYearString(month, year)
     return monthlyLeaderboardsCollection.findOne({
         month: monthYearString,
@@ -91,14 +95,14 @@ export const getMonthlyLeaderboard = async (month?: number, year?: number): Prom
 }
 
 // defaults to current month if month and year are not specified
-export const updateMonthlyLeaderboard = async (data: LeaderboardDatum[], month?: number, year?: number) => {
+export const updateMonthlyLeaderboard = async (data: LeaderboardDatum[], month: string, year: string) => {
     const monthYearString = getUTCMonthYearString(month, year)
     monthlyLeaderboardsCollection.updateOne({
         month: monthYearString,
     }, {
         $set: {
             month: monthYearString,
-            updated: Date.now(),
+            updated: DateTime.utc().toMillis(),
             leaderboardData: data,
         }
     }, {

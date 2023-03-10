@@ -9,13 +9,13 @@ services:
     volumes:
       - mongodb:/data/db
 
-  # node:
-  #   restart: always
-  #   build: .
-  #   ports:
-  #     - 3003:3000
-  #   depends_on:
-  #     - mongo
+  node:
+    # restart: always
+    build: .
+    ports:
+      - 3003:3000
+    depends_on:
+      - mongo
 
 volumes:
   mongodb:

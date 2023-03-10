@@ -14,14 +14,15 @@ export const data = new SlashCommandBuilder()
 
 export const execute = async (interaction: ChatInputCommandInteraction) => {
     const userUseCache = interaction.options.getBoolean('use_cache');
-    if(!userUseCache && !interaction.memberPermissions.has(PermissionsBitField.Flags.ManageGuild)) {
+    console.log(`userUseCache is ${userUseCache}`)
+    // userUseCache might be null but we only care if it's false
+    if(userUseCache === false && !interaction.memberPermissions.has(PermissionsBitField.Flags.ManageGuild)) {
         await interaction.reply({
             content: `Only uses with server manager permissions can disable the cache for this command`,
             ephemeral: true,
         });
         return;
     }
-    console.log(`userUseCache is ${userUseCache}`)
 
     const storedConfig = await mongodbInternal.getConfig();
 
@@ -43,7 +44,10 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     // give the current top streamer the Monthly Streaming Heir role
     // we can use the first index of the leaderboardData array since it's sorted
     // only add the heir role if the leader has more than 0 streams
-    leaderboardLib.updateSingletonRole(await interaction.guild.members.fetch(leaderboardResponse.leaderboardData[0].userDiscordId), storedConfig.heir_role, storedLastfmUsers, leaderboardResponse.leaderboardData[0].streamsThisMonth > 0)
+    // console.log(`monthlyStreamingHeir`)
+    const monthlyStreamingHeir = leaderboardResponse.leaderboardData[0];
+    // console.dir(monthlyStreamingHeir)
+    leaderboardLib.updateSingletonRole(await interaction.guild.members.fetch(monthlyStreamingHeir.userDiscordId), storedConfig.heir_role, storedLastfmUsers, monthlyStreamingHeir.serverArtistNormalizedStreamsThisMonth > 0)
 
     replyEmbed
         .setTitle(`Monthly Streaming Heir Leaderboard - ${ DateTime.utc().toLocaleString({ year: 'numeric', month: 'long' }) }`)
