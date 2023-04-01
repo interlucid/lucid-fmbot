@@ -104,9 +104,11 @@ export const getMonthlyLeaderboardData = async (
         updated: 0,
         leaderboardData: [],
     }
+    console.log(`at empty leaderboard result`)
     // for each user, query all their data for the specified month (start with current)
     // do this synchronously (using await in a for loop, not a Promise.all map) to avoid rate limit issues
     // if we get null (no data yet), keep the default initilized value
+    // TODO: fix issue where new users don't have an entry in the database
     const cachedLeaderboardResult: mongodbInternal.LeaderboardResult = await mongodbInternal.getMonthlyLeaderboard(month, year) ?? emptyLeaderboardResult;
     // use the cache if not disabled
     const leaderboardResult = useCache ? cachedLeaderboardResult : emptyLeaderboardResult;
@@ -151,7 +153,7 @@ export const getMonthlyLeaderboardData = async (
     const currentHeirDiscordUser = currentHeir ? await guild.members.fetch(currentHeir.userDiscordId) : null;
     const sortedLeaderboardData = leaderboardData.sort(leaderboardDataSort);
     const newHeirDiscordUser = await guild.members.fetch(sortedLeaderboardData[0].userDiscordId);
-    console.log(`current heir has Discord ID ${currentHeir.userDiscordId} and new heir has Discord ID ${sortedLeaderboardData[0].userDiscordId}`)
+    console.log(`current heir has Discord ID ${currentHeirDiscordUser} and new heir has Discord ID ${sortedLeaderboardData[0].userDiscordId}`)
     const text = `
     
 ${(await Promise.all(sortedLeaderboardData

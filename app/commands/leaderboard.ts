@@ -34,36 +34,47 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
         embeds: [
             replyEmbed
         ],
-        // ephemeral: true,
+        ephemeral: true,
     });
 
-    // fetch the leaderboard; only use the user cache option if it's explicitly set
-    const leaderboardResponse = await leaderboardLib.getMonthlyLeaderboardData(interaction.guild, userUseCache === null ? true : userUseCache);
-    const storedLastfmUsers = await mongodbInternal.getAllUsers();
-
-    // give the current top streamer the Monthly Streaming Heir role
-    // we can use the first index of the leaderboardData array since it's sorted
-    // only add the heir role if the leader has more than 0 streams
-    // console.log(`monthlyStreamingHeir`)
-    const monthlyStreamingHeir = leaderboardResponse.leaderboardData[0];
-    // console.dir(monthlyStreamingHeir)
-    leaderboardLib.updateSingletonRole(await interaction.guild.members.fetch(monthlyStreamingHeir.userDiscordId), storedConfig.heir_role, storedLastfmUsers, monthlyStreamingHeir.serverArtistNormalizedStreamsThisMonth > 0)
-
-    replyEmbed
-        .setTitle(`Monthly Streaming Heir Leaderboard - ${ DateTime.utc().toLocaleString({ year: 'numeric', month: 'long' }) }`)
-        .setDescription(leaderboardResponse.text)
+    try {
+        // fetch the leaderboard; only use the user cache option if it's explicitly set
+        const leaderboardResponse = await leaderboardLib.getMonthlyLeaderboardData(interaction.guild, userUseCache === null ? true : userUseCache);
+        const storedLastfmUsers = await mongodbInternal.getAllUsers();
     
-    // let users know about the cache if they utilize it
-    if(!leaderboardResponse.cacheExpired) {
+        // give the current top streamer the Monthly Streaming Heir role
+        // we can use the first index of the leaderboardData array since it's sorted
+        // only add the heir role if the leader has more than 0 streams
+        // console.log(`monthlyStreamingHeir`)
+        const monthlyStreamingHeir = leaderboardResponse.leaderboardData[0];
+        // console.dir(monthlyStreamingHeir)
+        leaderboardLib.updateSingletonRole(await interaction.guild.members.fetch(monthlyStreamingHeir.userDiscordId), storedConfig.heir_role, storedLastfmUsers, monthlyStreamingHeir.serverArtistNormalizedStreamsThisMonth > 0)
+    
         replyEmbed
-            .setFooter({
-                text: `Data not updating? Results are cached for five minutes to reduce load on Last.fm API.`,
-            });
-    }
-
-    await interaction.editReply({
-        embeds: [
+            .setTitle(`Monthly Streaming Heir Leaderboard - ${ DateTime.utc().toLocaleString({ year: 'numeric', month: 'long' }) }`)
+            .setDescription(leaderboardResponse.text)
+        
+        // let users know about the cache if they utilize it
+        if(!leaderboardResponse.cacheExpired) {
             replyEmbed
-        ],
-    });
+                .setFooter({
+                    text: `Data not updating? Results are cached for five minutes to reduce load on Last.fm API.`,
+                });
+        }
+    
+        await interaction.editReply({
+            embeds: [
+                replyEmbed
+            ],
+        });
+    } catch(e) {
+        replyEmbed
+            .setDescription(`There was an error updating the leaderboard.`)
+        await interaction.editReply({
+            embeds: [
+                replyEmbed
+            ],
+        });
+        throw e;
+    }
 }

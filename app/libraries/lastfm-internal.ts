@@ -161,6 +161,7 @@ export const getUserMonthlyStreams = (lastfmUser: string, updated: number, month
             console.log(`fetching page ${page} of ${lastPage} for lastfmUser ${lastfmUser} from ${ fromTime.setZone('utc').toLocaleString(DateTime.DATETIME_FULL) } to ${ endTime.setZone('utc').toLocaleString(DateTime.DATETIME_FULL) }`)
             // from time and end time expect number of seconds, not milliseconds, from UNIX epoch
             const trackResponse = await requestRecentUserStreamsByPage(lastfmUser, Math.round(fromTime.toSeconds(),), Math.round(endTime.toSeconds()), page)
+            if(!trackResponse.recenttracks?.track?.length) console.log(`iterable thing is`, trackResponse.recenttracks.track)
             lastPage = parseInt(trackResponse.recenttracks['@attr'].totalPages);
             await timeout(1500);
             aggregateStreams = [...aggregateStreams, ...trackResponse.recenttracks.track];
