@@ -1,0 +1,11 @@
+{
+    "legacyWatch": true,
+    "ignoreRoot": [
+        ".git",
+        "/node_modules",
+        "/dist"
+    ],
+    "watch": ["./app"],
+    "ext": "ts",
+    "exec": "tsup"
+}

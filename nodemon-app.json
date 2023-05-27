@@ -1,0 +1,10 @@
+{
+    "legacyWatch": true,
+    "ignoreRoot": [
+        ".git",
+        "/node_modules"
+    ],
+    "watch": ["./dist"],
+    "ext": "cjs",
+    "exec": "npm start"
+}

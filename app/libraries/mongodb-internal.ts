@@ -5,42 +5,6 @@ import { LastfmTrack } from '~/libraries/lastfm-internal';
 
 import '~/load-env';
 
-const dbUrl = process.env.MONGO_DB_ADDRESS;
-console.log(`dbUrl is ${dbUrl}`)
-const dbClient = new MongoClient(dbUrl);
-const dbName = 'lucid-fm-bot';
-
-let db = null;
-let usersCollection: Collection = null;
-let monthlyLeaderboardsCollection: Collection = null;
-let serverConfigCollection: Collection = null;
-
-export const getUTCMonthYearString = (month: string, year: string) => {
-    // console.log(`input month and year are ${ year }-${ month }`)
-    console.log(`utc month string is ${ year }-${ month }`)
-    return `${ year }-${ month }`;
-}
-
-const dbInit = async () => {
-    try {
-        // console.log(dbClient);
-        await dbClient.connect();
-        db = dbClient.db(dbName);
-        usersCollection = db.collection('users');
-        monthlyLeaderboardsCollection = db.collection('monthlyLeaderboards');
-        serverConfigCollection = db.collection('serverConfig');
-        console.log('Successfully connected to database');
-        // initialize serverConfig
-        const serverConfig = await getConfig();
-        if(!serverConfig) setConfig({})
-    } catch (e) {
-        console.error('Error connecting to database')
-        throw e;
-    }
-}
-
-dbInit();
-
 export interface StoredUser {
     _id?: ObjectId,
     lastfmUsername: string,
@@ -61,8 +25,56 @@ export interface LeaderboardResult {
 }
 
 export interface Config {
-    [name: string]: string,
+    artistName: string,
+    heirRole: string,
+    monarchRole: string,
+    announcementsChannel: string,
+    embedColor: string,
 }
+
+const dbUrl = process.env.MONGO_DB_ADDRESS;
+console.log(`dbUrl is ${dbUrl}`);
+const dbClient = new MongoClient(dbUrl);
+const dbName = `lucid-fm-bot`;
+const singletonId: ObjectId = new ObjectId(`64725dc1e9bcdba3445ce979`);
+
+let db = null;
+let usersCollection: Collection = null;
+let monthlyLeaderboardsCollection: Collection = null;
+let serverConfigCollection: Collection = null;
+
+export const getUTCMonthYearString = (month: string, year: string) => {
+    // console.log(`input month and year are ${ year }-${ month }`)
+    console.log(`utc month string is ${ year }-${ month }`);
+    return `${ year }-${ month }`;
+};
+
+export const dbInit = async () => {
+    try {
+        // console.log(dbClient);
+        await dbClient.connect();
+        db = dbClient.db(dbName);
+        usersCollection = db.collection(`users`);
+        monthlyLeaderboardsCollection = db.collection(`monthlyLeaderboards`);
+        serverConfigCollection = db.collection(`serverConfig`);
+        console.log(`Successfully connected to database`);
+        // initialize serverConfig
+        const serverConfig = await getConfig();
+        if (!serverConfig) {
+            setConfig({
+                artistName: ``,
+                heirRole: ``,
+                monarchRole: ``,
+                announcementsChannel: ``,
+                embedColor: ``,
+            });
+        }
+    }
+    catch (e) {
+        console.error(`Error connecting to database`);
+        throw e;
+    }
+};
 
 // adds user to the database
 
@@ -71,32 +83,32 @@ export const updateUser = async (user: StoredUser) => {
     usersCollection.updateOne({
         discordId: user.discordId,
     }, {
-        $set: user
+        $set: user,
     }, {
-        upsert: true
+        upsert: true,
     });
-}
+};
 
 export const getUserByDiscordId = async (userDiscordId: string) => {
     return usersCollection.findOne({
         discordId: userDiscordId,
-    })
-}
+    });
+};
 
 export const getAllUsers = async () => {
     return usersCollection.find().toArray() as unknown as Promise<StoredUser[]>;
-}
+};
 
 export const getMonthlyLeaderboard = async (month: string, year: string): Promise<LeaderboardResult> => {
-    const monthYearString = getUTCMonthYearString(month, year)
+    const monthYearString = getUTCMonthYearString(month, year);
     return monthlyLeaderboardsCollection.findOne({
         month: monthYearString,
     }) as unknown as Promise<LeaderboardResult>;
-}
+};
 
 // defaults to current month if month and year are not specified
 export const updateMonthlyLeaderboard = async (data: LeaderboardDatum[], month: string, year: string) => {
-    const monthYearString = getUTCMonthYearString(month, year)
+    const monthYearString = getUTCMonthYearString(month, year);
     monthlyLeaderboardsCollection.updateOne({
         month: monthYearString,
     }, {
@@ -104,24 +116,24 @@ export const updateMonthlyLeaderboard = async (data: LeaderboardDatum[], month: 
             month: monthYearString,
             updated: DateTime.utc().toMillis(),
             leaderboardData: data,
-        }
+        },
     }, {
         upsert: true,
-    })
-}
+    });
+};
 
 export const getConfig = async () => {
     return serverConfigCollection.findOne({
-        _id: 1,
-    })
-}
+        _id: singletonId,
+    });
+};
 
 export const setConfig = async (config: Config) => {
     return serverConfigCollection.updateOne({
-        _id: 1,
+        _id: singletonId,
     }, {
         $set: config,
     }, {
         upsert: true,
-    })
-}
+    });
+};
