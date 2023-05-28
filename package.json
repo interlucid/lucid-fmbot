@@ -5,6 +5,7 @@
   "main": "dist/main.js",
   "type": "module",
   "scripts": {
+    "build": "tsup",
     "build:watch": "nodemon --config nodemon-build.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

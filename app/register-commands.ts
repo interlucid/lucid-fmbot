@@ -29,9 +29,7 @@ const rest = new REST({ version: `10` }).setToken(process.env.DISCORD_TOKEN);
     const client = await new Client({ intents: [GatewayIntentBits.Guilds] });
     await client.login(process.env.DISCORD_TOKEN);
     try {
-        client.once(Events.ClientReady, (c: any) => {
-            console.log(`Ready! Logged in as ${c.user.tag}`);
-        });
+
         console.log(`Started refreshing ${commands.length} application (/) commands.`);
         // just refresh all guilds that we're logged into; if this bot becomes super famous at some point optimize it
         await Promise.all(client.guilds.cache.map(async (guild) => {
