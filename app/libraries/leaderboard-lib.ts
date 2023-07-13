@@ -12,22 +12,30 @@ export enum LeaderboardType {
 }
 
 // 5 minute global cache time (ms)
-const globalCacheTime = 5 * 60 * 1000;
+const GLOBAL_CACHE_TIME = 5 * 60 * 1000;
+
+export const clearSingletonRole = async (guild: Guild, roleId: string, users: mongodbInternal.StoredUser[]) => {
+    // otherwise iterate through the users and remove the role from everyone
+    for (const user of users) {
+        const otherMember = await guild.members.fetch({ user: user.discordId });
+        await otherMember.roles.remove(roleId);
+    }
+};
 
 // give a role that only one member can have to this member
 export const updateSingletonRole = async (member: GuildMember, roleId: string, users: mongodbInternal.StoredUser[], addRole = true) => {
     // assume if the given member has the role no one else has it
     if (member.roles.cache.find(role => role.id === roleId)) return;
 
-    // otherwise iterate through the users and remove the role from everyone
-    for (const user of users) {
-        const otherMember = await member.guild.members.fetch({ user: user.discordId });
-        await otherMember.roles.remove(roleId);
-    }
+    await clearSingletonRole(member.guild, roleId, users);
 
     // add the role
     if (addRole) {
+        console.log(`about to add the role ${roleId} to ${member.displayName}`);
         member.roles.add(roleId);
+        console.log(`done adding the role ${roleId} to ${member.displayName}`);
+    } else {
+        console.log(`NOT adding the role to ${member.displayName}`);
     }
 };
 
@@ -36,7 +44,7 @@ const getNormalizedStreamsForUser = (aggregateStreams: lastfmInternal.LastfmTrac
     // build day array
     const daysStreamed: { [key: string]: lastfmInternal.LastfmTrack[] } = {};
     for (const stream of aggregateStreams) {
-        // skip songs if no date is found (for example, if it is playing now)
+    // skip songs if no date is found (for example, if it is playing now)
         if (!stream.date) {
             // console.log(`stream has no date, continuing...`)
             continue;
@@ -49,12 +57,12 @@ const getNormalizedStreamsForUser = (aggregateStreams: lastfmInternal.LastfmTrac
             daysStreamed[dateStreamed] = daysStreamed[dateStreamed] ?? [];
             daysStreamed[dateStreamed].push(stream);
         }
-        // console.log(`pushed stream streamed on ${ dateStreamed } to array`)
+    // console.log(`pushed stream streamed on ${ dateStreamed } to array`)
     }
-    console.log(`days streamed is`);
-    for (const day in daysStreamed) {
-        console.log(`streams: ${ day }, ${ daysStreamed[day].length }`);
-    }
+    // console.log(`days streamed is`);
+    // for (const day in daysStreamed) {
+    //     console.log(`streams: ${ day }, ${ daysStreamed[day].length }`);
+    // }
 
     const maxStreamsInANormalDay = 250;
     const normalDays = Object.values(daysStreamed)
@@ -67,10 +75,10 @@ const getNormalizedStreamsForUser = (aggregateStreams: lastfmInternal.LastfmTrac
         .reduce((acc: number, cur) => {
             const totalTrackCount = cur.length;
             const artistTrackCount: number = cur.filter(track => track.artist[`#text`].toLowerCase().includes(lowerCaseArtist)).length;
-            console.log(`adding up days; total streams is ${totalTrackCount} and artist streams is ${artistTrackCount}`);
+            // console.log(`adding up days; total streams is ${totalTrackCount} and artist streams is ${artistTrackCount}`);
             const normalizedArtistTrackCount = totalTrackCount > maxStreamsInANormalDay ?
-                // if we guess the user is uploading scrobbles, take the percentage of artist streams from the upload
-                //  and apply it to an average day stream count, avoiding divide by 0 errors
+            // if we guess the user is uploading scrobbles, take the percentage of artist streams from the upload
+            //  and apply it to an average day stream count, avoiding divide by 0 errors
                 Math.round(artistTrackCount / Math.max((totalTrackCount / Math.max(averageNormalDayStreams, 0.1)), 1)) :
                 artistTrackCount;
             // console.log(`about to return acc of ${acc} + normalizedArtistTrackCount of ${normalizedArtistTrackCount}`)
@@ -102,41 +110,51 @@ const leaderboardDataSort = (user1: mongodbInternal.LeaderboardDatum, user2: mon
     return user2.serverArtistNormalizedStreamsThisMonth - user1.serverArtistNormalizedStreamsThisMonth;
 };
 
-const updateMonthlyLeaderboardData = async (useCache: boolean, month: string, year: string) => {
-    const storedConfig = await mongodbInternal.getConfig();
-    const storedLastfmUsers = await mongodbInternal.getAllUsers();
-    const emptyLeaderboardResult: mongodbInternal.LeaderboardResult = {
+const getEmptyLeaderboardDatum = (discordId: string): mongodbInternal.LeaderboardDatum => {
+    return {
+        userDiscordId: discordId,
+        serverArtistNormalizedStreamsThisMonth: 0,
+        streamData: [],
+    };
+};
+
+const getEmptyLeaderboardResult = (month: string, year: string, storedLastfmUsers: mongodbInternal.StoredUser[]): mongodbInternal.LeaderboardResult => {
+    return {
         month: mongodbInternal.getUTCMonthYearString(month, year),
         leaderboardData: storedLastfmUsers.map(lastfmUser => {
-            // TODO: fix issue where new users don't have an entry in the database
-            // this new initialization might fix it actually
-            return {
-                userDiscordId: lastfmUser.discordId,
-                serverArtistNormalizedStreamsThisMonth: 0,
-                streamData: [],
-            };
+            return getEmptyLeaderboardDatum(lastfmUser.discordId);
         }),
         updated: 0,
     };
-    console.log(`at empty leaderboard result`);
+};
+
+const updateMonthlyLeaderboardData = async (useCache: boolean, month: string, year: string) => {
+    const storedConfig = await mongodbInternal.getConfig();
+    const storedLastfmUsers = await mongodbInternal.getAllUsers();
     // for each user, query all their data for the specified month (start with current)
     // do this synchronously (using await in a for loop, not a Promise.all map) to avoid rate limit issues
     // if we get null (no data yet), keep the default initilized value
-    const cachedLeaderboardResult: mongodbInternal.LeaderboardResult = await mongodbInternal.getMonthlyLeaderboard(month, year) ?? emptyLeaderboardResult;
+    const cachedLeaderboardResult: mongodbInternal.LeaderboardResult = await mongodbInternal.getMonthlyLeaderboard(month, year) ?? getEmptyLeaderboardResult(month, year, storedLastfmUsers);
     // use the cache if not disabled
-    const leaderboardResult = useCache ? cachedLeaderboardResult : emptyLeaderboardResult;
+    const leaderboardResult = useCache ? cachedLeaderboardResult : getEmptyLeaderboardResult(month, year, storedLastfmUsers);
 
     const leaderboardData: mongodbInternal.LeaderboardDatum[] = leaderboardResult.leaderboardData;
     let globalCacheExpired;
 
     for (const user of storedLastfmUsers) {
-        const leaderboardDatum = leaderboardData.find((currentLeaderboardDatum: mongodbInternal.LeaderboardDatum) => currentLeaderboardDatum.userDiscordId === user.discordId);
-        console.log(`leaderboardDatum is ${leaderboardDatum}`);
+        const cachedLeaderboardDatum = leaderboardData.find((currentLeaderboardDatum: mongodbInternal.LeaderboardDatum) => currentLeaderboardDatum.userDiscordId === user.discordId);
+        const leaderboardDatum = cachedLeaderboardDatum ?? getEmptyLeaderboardDatum(user.discordId);
+        // if the user wasn't cached, add them to the data which will be cached later
+        if (!cachedLeaderboardDatum) {
+            leaderboardData.push(leaderboardDatum);
+        }
+        // console.log(`leaderboardDatum before op is ${JSON.stringify(leaderboardDatum, null, 4)}`);
         // base the cache on each user to account for the time it takes to fetch each user's data
         const latestStreamTime = (parseInt(leaderboardDatum.streamData[0]?.date.uts) || 0) * 1000;
         // only fetch new data from lastfm if more than five minutes has passed from the last fetch
         // const cacheExpired = DateTime.utc().toMillis() - latestStreamTime > 3000;
-        const cacheExpired = DateTime.utc().toMillis() - latestStreamTime > globalCacheTime;
+        const cacheExpired = DateTime.utc().toMillis() - leaderboardResult.updated > GLOBAL_CACHE_TIME;
+        // console.log(`current UTC time is ${DateTime.utc().toMillis()}, latest stream time is ${latestStreamTime}, GLOBAL_CACHE_TIME is ${GLOBAL_CACHE_TIME}; cacheExpired is ${cacheExpired}`);
         const lowerCaseArtist = storedConfig.artistName.toLowerCase();
         let newAggregateStreams: lastfmInternal.LastfmTrack[] = [];
         if (cacheExpired) {
@@ -144,24 +162,14 @@ const updateMonthlyLeaderboardData = async (useCache: boolean, month: string, ye
             globalCacheExpired = true;
         }
         const aggregateStreams = [
-            ...(leaderboardDatum ? leaderboardDatum.streamData : []),
+            ...leaderboardDatum.streamData,
             ...newAggregateStreams,
         ];
 
+        leaderboardDatum.streamData = aggregateStreams;
         const normalizedStreamCount = getNormalizedStreamsForUser(aggregateStreams, lowerCaseArtist);
-
-        // don't add multiples of the same user
-        if (leaderboardDatum) {
-            leaderboardDatum.serverArtistNormalizedStreamsThisMonth = normalizedStreamCount;
-        }
-        else {
-            // if we don't have the user yet add a new one
-            leaderboardData.push({
-                userDiscordId: user.discordId,
-                serverArtistNormalizedStreamsThisMonth: normalizedStreamCount,
-                streamData: aggregateStreams,
-            });
-        }
+        leaderboardDatum.serverArtistNormalizedStreamsThisMonth = normalizedStreamCount;
+        // console.log(`leaderboardDatum after op is ${JSON.stringify(leaderboardDatum, null, 4)}`);
     }
     // console.dir(Object.keys(leaderboardData[0]));
 
@@ -185,22 +193,21 @@ export const getMonthlyLeaderboardData = async (
     // console.log(JSON.stringify(storedLastfmUsers, null, 4));
     // get the current heir from the cached result, otherwise it will show the messages for claiming the crown when cache is manually disabled
     const cachedLeaderboardResult: mongodbInternal.LeaderboardResult = await mongodbInternal.getMonthlyLeaderboard(month, year);
-    const currentHeir = cachedLeaderboardResult?.leaderboardData?.length ? cachedLeaderboardResult.leaderboardData.sort(leaderboardDataSort)[0] : null;
+    const currentHeir = cachedLeaderboardResult?.leaderboardData?.length && cachedLeaderboardResult?.leaderboardData.reduce((acc, leaderboardDatum) => acc + leaderboardDatum.serverArtistNormalizedStreamsThisMonth, 0) ? cachedLeaderboardResult.leaderboardData.sort(leaderboardDataSort)[0] : null;
 
     const globalCacheExpired = await updateMonthlyLeaderboardData(useCache, month, year);
-    const updatedLeaderboardResult: mongodbInternal.LeaderboardResult = await mongodbInternal.getMonthlyLeaderboard(month, year);
-    const leaderboardData = updatedLeaderboardResult.leaderboardData;
+    const updatedLeaderboardResult = await mongodbInternal.getMonthlyLeaderboard(month, year);
+    const leaderboardData = updatedLeaderboardResult?.leaderboardData ? updatedLeaderboardResult.leaderboardData : getEmptyLeaderboardResult(month, year, storedLastfmUsers).leaderboardData;
 
     // assemble data
     const currentHeirDiscordUser = currentHeir ? await guild.members.fetch(currentHeir.userDiscordId) : null;
     const sortedLeaderboardData = leaderboardData.sort(leaderboardDataSort);
     const newHeirDiscordUser = await guild.members.fetch(sortedLeaderboardData[0].userDiscordId);
-    console.log(`current heir has Discord ID ${currentHeirDiscordUser.id} and new heir has Discord ID ${sortedLeaderboardData[0].userDiscordId}`);
+    // console.log(`current heir has Discord ID ${currentHeirDiscordUser ?? currentHeirDiscordUser.id} and new heir has Discord ID ${sortedLeaderboardData[0].userDiscordId}`);
     let title;
     if (leaderboardType === LeaderboardType.Heir) {
         title = `Monthly Streaming Heir Leaderboard - ${ DateTime.utc().toLocaleString({ year: `numeric`, month: `long` }) }`;
-    }
-    else if (leaderboardType === LeaderboardType.Monarch) {
+    } else if (leaderboardType === LeaderboardType.Monarch) {
         const aDayLastMonth = DateTime.utc().minus({ months: 1 });
         const monthlyStreamingMonarch = leaderboardData[0];
         const monthlyStreamingMonarchMember = await guild.members.fetch(leaderboardData[0].userDiscordId);
@@ -210,9 +217,13 @@ export const getMonthlyLeaderboardData = async (
             monthlyStreamingMonarch.serverArtistNormalizedStreamsThisMonth
         } Interlucid streams!`;
     }
-    const description = `
-    
-${(await Promise.all(sortedLeaderboardData
+    let description;
+    if (sortedLeaderboardData[0].serverArtistNormalizedStreamsThisMonth === 0) {
+        description = `No one has listened to any Interlucid songs yet this month. That means to become the heir to the throne, you just have to listen to one song!`;
+    } else {
+        description = `
+        
+    ${(await Promise.all(sortedLeaderboardData
         .map(async (leaderboardDatum, index) => {
             const guildMember = (await guild.members.fetch(leaderboardDatum.userDiscordId));
             return `${index === 0 ? `👑 ` : `${index + 1}.`} [${
@@ -220,10 +231,11 @@ ${(await Promise.all(sortedLeaderboardData
             }](https://last.fm/user/${ storedLastfmUsers.find(user => user.discordId === leaderboardDatum.userDiscordId).lastfmUsername }) - **${ leaderboardDatum.serverArtistNormalizedStreamsThisMonth }** ${storedConfig.artistName} play${ leaderboardDatum.serverArtistNormalizedStreamsThisMonth === 1 ? `` : `s` }\n`;
         })))
         .join(``)}
-${ currentHeir === null ? `${newHeirDiscordUser.displayName} is the new heir to the throne!` : `` }${
+    ${ currentHeir === null ? `${newHeirDiscordUser.displayName} is the new heir to the throne!` : `` }${
     currentHeir && currentHeir.userDiscordId !== sortedLeaderboardData[0].userDiscordId ? `${newHeirDiscordUser.displayName} overtook ${currentHeirDiscordUser.displayName} and is now heir to the throne!` : ``
 }
-`;
+    `;
+    }
     return {
         title,
         description,
@@ -231,7 +243,6 @@ ${ currentHeir === null ? `${newHeirDiscordUser.displayName} is the new heir to 
         leaderboardData,
     };
 };
-
 
 export const announceLeaderboardUpdate = async (leaderboardType: LeaderboardType, client: Client) => {
     const storedConfig = await mongodbInternal.getConfig();
@@ -248,8 +259,7 @@ export const announceLeaderboardUpdate = async (leaderboardType: LeaderboardType
             false,
         );
         roleToUpdate = storedConfig.heirRole;
-    }
-    else if (leaderboardType === LeaderboardType.Monarch) {
+    } else if (leaderboardType === LeaderboardType.Monarch) {
         const aDayLastMonth = DateTime.utc().minus({ months: 1 });
         leaderboardResponse = await getMonthlyLeaderboardData(
             leaderboardType,

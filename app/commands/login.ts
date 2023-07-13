@@ -26,8 +26,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
             // console.log(JSON.stringify(storedUser, null, 4))
             console.log(`stored user is`);
             console.dir(storedUser);
-        }
-        catch (e) {
+        } catch (e) {
             console.log(e, `didn't find user in the database but it's probably fine because this may be their first time logging in`);
         }
     }
@@ -41,12 +40,10 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
                 content: `Click this link to log in: http://www.last.fm/api/auth/?api_key=${ lastfmInternal.LASTFM_API_KEY }&token=${ lastfmTokenData.token }`,
                 ephemeral: true,
             });
-        }
-        else {
+        } else {
             console.log(`got to the else`);
         }
-    }
-    catch (e) {
+    } catch (e) {
         await interaction.reply({
             content: `There was an error retrieving an authentication token from Last.fm. Try again later.`,
             ephemeral: true,
@@ -67,8 +64,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
             discordId: interaction.member.user.id,
         });
         await interaction.editReply(`Successfully authenticated!`);
-    }
-    catch (e) {
+    } catch (e) {
         console.log(`error fetching session`, JSON.stringify(e, null, 4));
         await interaction.editReply(`There was a problem while trying to authenticate. Try again later`);
     }

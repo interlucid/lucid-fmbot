@@ -48,8 +48,7 @@ const rest = new REST({ version: `10` }).setToken(process.env.DISCORD_TOKEN);
         client.destroy();
         // console.log(`Logged out ${client.user.tag}`);
         console.log(`Logged out`);
-    }
-    catch (error) {
+    } catch (error) {
         // And of course, make sure you catch and log any errors!
         console.error(error);
     }

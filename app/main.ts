@@ -17,11 +17,15 @@ for (const commandImport of Object.values(commandImports)) {
 
 // When the client is ready, run this code (only once)
 // We use 'c' for the event parameter to keep it separate from the already defined 'client'
-client.once(Events.ClientReady, () => {
-    console.log(`Ready! Logged in as ${client.user.tag}`);
-    mongodbInternal.dbInit();
-    cronInternal.startCurrentMonthUpdateJob(client);
-    cronInternal.startLastMonthFinalCountJob(client);
+client.once(Events.ClientReady, async () => {
+    try {
+        console.log(`Ready! Logged in as ${client.user.tag}`);
+        mongodbInternal.dbInit();
+        cronInternal.startCurrentMonthUpdateJob(client);
+        cronInternal.startLastMonthFinalCountJob(client);
+    } catch (e) {
+        console.error(`general error`, JSON.stringify(e, null, 4));
+    }
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -36,8 +40,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     try {
         await command.execute(interaction);
-    }
-    catch (error) {
+    } catch (error) {
         console.error(`Error executing "/${interaction.commandName}" command`);
         console.error(error);
     }

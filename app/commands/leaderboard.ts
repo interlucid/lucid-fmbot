@@ -47,7 +47,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
         // only add the heir role if the leader has more than 0 streams
         // console.log(`monthlyStreamingHeir`)
         const monthlyStreamingHeir = leaderboardResponse.leaderboardData[0];
-        // console.dir(monthlyStreamingHeir)
+        // console.dir(monthlyStreamingHeir);
         leaderboardLib.updateSingletonRole(await interaction.guild.members.fetch(monthlyStreamingHeir.userDiscordId), storedConfig.heirRole, storedLastfmUsers, monthlyStreamingHeir.serverArtistNormalizedStreamsThisMonth > 0);
 
         replyEmbed
@@ -67,8 +67,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
                 replyEmbed,
             ],
         });
-    }
-    catch (e) {
+    } catch (e) {
         replyEmbed
             .setDescription(`There was an error updating the leaderboard.`);
         await interaction.editReply({

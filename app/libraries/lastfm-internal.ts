@@ -124,7 +124,7 @@ const requestRecentUserStreamsByPage = async (lastfmUser: string, fromTime: numb
                 },
                 error: (error: ErrorData) => {
                     // console.log(`inside lastfm.session error, token is`, token);
-                    reject(`error with requstRecentUserStreamsByPage: ${JSON.stringify(error)}`);
+                    reject(`error with requestRecentUserStreamsByPage: ${JSON.stringify(error)}`);
                 },
             },
         });
@@ -152,14 +152,14 @@ export const getUserMonthlyStreams = async (lastfmUser: string, updated: number,
     const fromTime = DateTime.fromMillis(Math.max(updated, firstMillisecondOfMonth));
     // don't let end time be past the current time
     const endTime = DateTime.fromMillis(Math.min(DateTime.utc().toMillis(), lastMillisecondOfMonth));
-    console.log(`month is ${month} and year is ${year}`);
-    console.log(`from time is ${fromTime.toUTC()} and end time is ${endTime.toUTC()}`);
+    // console.log(`month is ${month} and year is ${year}`);
+    console.log(`from time is ${fromTime.toUTC()} and end time is ${endTime.toUTC()}; lastfmUser is ${lastfmUser}`);
     let aggregateStreams: LastfmTrack[] = [];
     // fetch every page
     let lastPage = 999999999;
     for (let page = 1; page <= lastPage; page++) {
         // for(let page = 1; page <= Math.min(8, lastPage); page++) {
-        console.log(`fetching page ${page} of ${lastPage} for lastfmUser ${lastfmUser} from ${ fromTime.setZone(`utc`).toLocaleString(DateTime.DATETIME_FULL) } to ${ endTime.setZone(`utc`).toLocaleString(DateTime.DATETIME_FULL) }`);
+        console.log(`fetching page ${page} of ${lastPage}`);
         // from time and end time expect number of seconds, not milliseconds, from UNIX epoch
         const trackResponse = await requestRecentUserStreamsByPage(lastfmUser, Math.round(fromTime.toSeconds()), Math.round(endTime.toSeconds()), page);
         if (!trackResponse.recenttracks?.track?.length && trackResponse.recenttracks?.track?.length !== 0) {
@@ -169,8 +169,8 @@ export const getUserMonthlyStreams = async (lastfmUser: string, updated: number,
             continue;
         }
         lastPage = parseInt(trackResponse.recenttracks[`@attr`].totalPages);
-        // Last.fm rate limits at 1 second, wait 1.5 seconds to be generous
-        await timeout(1500);
+        // Last.fm rate limits at 1 second, wait 1.2 seconds to be generous
+        await timeout(1200);
         aggregateStreams = [...aggregateStreams, ...trackResponse.recenttracks.track];
     }
 

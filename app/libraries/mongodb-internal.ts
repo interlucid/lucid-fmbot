@@ -33,7 +33,6 @@ export interface Config {
 }
 
 const dbUrl = process.env.MONGO_DB_ADDRESS;
-console.log(`dbUrl is ${dbUrl}`);
 const dbClient = new MongoClient(dbUrl);
 const dbName = `lucid-fm-bot`;
 const singletonId: ObjectId = new ObjectId(`64725dc1e9bcdba3445ce979`);
@@ -51,6 +50,7 @@ export const getUTCMonthYearString = (month: string, year: string) => {
 
 export const dbInit = async () => {
     try {
+        console.log(`dbUrl is ${dbUrl}`);
         // console.log(dbClient);
         await dbClient.connect();
         db = dbClient.db(dbName);
@@ -69,9 +69,8 @@ export const dbInit = async () => {
                 embedColor: ``,
             });
         }
-    }
-    catch (e) {
-        console.error(`Error connecting to database`);
+    } catch (e) {
+        console.error(`Error connecting to database`, JSON.stringify(e, null, 4));
         throw e;
     }
 };
