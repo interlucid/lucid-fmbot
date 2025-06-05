@@ -44,13 +44,13 @@ let serverConfigCollection: Collection = null;
 
 export const getUTCMonthYearString = (month: string, year: string) => {
     // console.log(`input month and year are ${ year }-${ month }`)
-    console.log(`utc month string is ${ year }-${ month }`);
+    // console.log(`utc month string is ${ year }-${ month }`);
     return `${ year }-${ month }`;
 };
 
 export const dbInit = async () => {
     try {
-        console.log(`dbUrl is ${dbUrl}`);
+        console.log(`dbUrl is ${ dbUrl }`);
         // console.log(dbClient);
         await dbClient.connect();
         db = dbClient.db(dbName);
@@ -105,10 +105,30 @@ export const getMonthlyLeaderboard = async (month: string, year: string): Promis
     }) as unknown as Promise<LeaderboardResult>;
 };
 
+// const chunkSize = 500;
+// for (let i = 0; i < data.length; i += chunkSize) {
+//     console.log(`current chunk is ${ i } to ${ i + chunkSize }`);
+//     const chunk = data.slice(i, i + chunkSize);
+//     const monthYearString = getUTCMonthYearString(month, year);
+//     // need to await because we might depend on waiting for database operations to complete before running more code
+//     await monthlyLeaderboardsCollection.updateOne({
+//         month: monthYearString,
+//     }, {
+//         $addToSet: {
+//             month: monthYearString,
+//             updated: DateTime.utc().toMillis(),
+//             leaderboardData: chunk,
+//         },
+//     }, {
+//         upsert: true,
+//     });
+// }
+
 // defaults to current month if month and year are not specified
 export const updateMonthlyLeaderboard = async (data: LeaderboardDatum[], month: string, year: string) => {
     const monthYearString = getUTCMonthYearString(month, year);
-    monthlyLeaderboardsCollection.updateOne({
+    // need to await because we might depend on waiting for database operations to complete before running more code
+    await monthlyLeaderboardsCollection.updateOne({
         month: monthYearString,
     }, {
         $set: {

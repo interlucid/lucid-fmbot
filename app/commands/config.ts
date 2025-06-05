@@ -131,13 +131,13 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     }
 
     const configTable = `${
-        (await Promise.all(channelOptions.map(async option => `${option.displayName}: <#${
-            (await interaction.guild.channels.fetch(newStoredConfig[snakeToCamel(option.name) as keyof mongodbInternal.Config])).id}>\n`)))
+        (await Promise.all(channelOptions.map(async option => `${ option.displayName }: <#${
+            (await interaction.guild.channels.fetch(newStoredConfig[snakeToCamel(option.name) as keyof mongodbInternal.Config])).id }>\n`)))
             .join(``) }${
-        (await Promise.all(mentionableOptions.map(async option => `${option.displayName}: **${
-            (await interaction.guild.roles.fetch(newStoredConfig[snakeToCamel(option.name) as keyof mongodbInternal.Config])).name}**\n`)))
+        (await Promise.all(mentionableOptions.map(async option => `${ option.displayName }: **${
+            (await interaction.guild.roles.fetch(newStoredConfig[snakeToCamel(option.name) as keyof mongodbInternal.Config])).name }**\n`)))
             .join(``) }${
-        stringOptions.map(option => `${option.displayName}: **${newStoredConfig[snakeToCamel(option.name) as keyof mongodbInternal.Config]}**\n`).join(``)
+        stringOptions.map(option => `${ option.displayName }: **${ newStoredConfig[snakeToCamel(option.name) as keyof mongodbInternal.Config] }**\n`).join(``)
     }`;
 
     const replyEmbed = new EmbedBuilder()

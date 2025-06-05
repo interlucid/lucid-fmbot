@@ -103,7 +103,7 @@ export interface LastfmTrack {
         // eslint-disable-next-line quotes
         '#text': string
     }
-    date: {
+    date?: {
         uts: string
     }
 }
@@ -124,7 +124,7 @@ const requestRecentUserStreamsByPage = async (lastfmUser: string, fromTime: numb
                 },
                 error: (error: ErrorData) => {
                     // console.log(`inside lastfm.session error, token is`, token);
-                    reject(`error with requestRecentUserStreamsByPage: ${JSON.stringify(error)}`);
+                    reject(`error with requestRecentUserStreamsByPage: ${ JSON.stringify(error) }`);
                 },
             },
         });
@@ -137,12 +137,12 @@ const timeout = (ms: number) => {
 
 export const getUserMonthlyStreams = async (lastfmUser: string, updated: number, month: number, year: number): Promise<LastfmTrack[]> => {
     if (
-        month % 1 != 0 ||
-            year % 1 != 0 ||
-            month < 1 ||
-            month > 12 ||
-            year < 2000 ||
-            year > 2100
+        month % 1 != 0
+            || year % 1 != 0
+            || month < 1
+            || month > 12
+            || year < 2000
+            || year > 2100
     ) {
         throw new Error(`month or year format invalid (not a whole number, not a usable month or year, etc.)`);
     }
@@ -153,13 +153,13 @@ export const getUserMonthlyStreams = async (lastfmUser: string, updated: number,
     // don't let end time be past the current time
     const endTime = DateTime.fromMillis(Math.min(DateTime.utc().toMillis(), lastMillisecondOfMonth));
     // console.log(`month is ${month} and year is ${year}`);
-    console.log(`from time is ${fromTime.toUTC()} and end time is ${endTime.toUTC()}; lastfmUser is ${lastfmUser}`);
+    console.log(`from time is ${ fromTime.toUTC() } and end time is ${ endTime.toUTC() }; lastfmUser is ${ lastfmUser }`);
     let aggregateStreams: LastfmTrack[] = [];
     // fetch every page
     let lastPage = 999999999;
     for (let page = 1; page <= lastPage; page++) {
         // for(let page = 1; page <= Math.min(8, lastPage); page++) {
-        console.log(`fetching page ${page} of ${lastPage}`);
+        console.log(`fetching page ${ page } of ${ lastPage }`);
         // from time and end time expect number of seconds, not milliseconds, from UNIX epoch
         const trackResponse = await requestRecentUserStreamsByPage(lastfmUser, Math.round(fromTime.toSeconds()), Math.round(endTime.toSeconds()), page);
         if (!trackResponse.recenttracks?.track?.length && trackResponse.recenttracks?.track?.length !== 0) {
@@ -174,5 +174,10 @@ export const getUserMonthlyStreams = async (lastfmUser: string, updated: number,
         aggregateStreams = [...aggregateStreams, ...trackResponse.recenttracks.track];
     }
 
-    return aggregateStreams;
+    return aggregateStreams.map(stream => {
+        return {
+            artist: stream.artist,
+            date: stream.date ? stream.date : undefined,
+        };
+    });
 };

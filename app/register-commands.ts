@@ -5,7 +5,7 @@
 //     },
 // ];
 
-import { Client, Events, GatewayIntentBits, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 
 import { commandImports } from '~/commands/index';
 import '~/load-env';
@@ -30,7 +30,7 @@ const rest = new REST({ version: `10` }).setToken(process.env.DISCORD_TOKEN);
     await client.login(process.env.DISCORD_TOKEN);
     try {
 
-        console.log(`Started refreshing ${commands.length} application (/) commands.`);
+        console.log(`Started refreshing ${ commands.length } application (/) commands.`);
         // just refresh all guilds that we're logged into; if this bot becomes super famous at some point optimize it
         await Promise.all(client.guilds.cache.map(async (guild) => {
             // The put method is used to fully refresh all commands in the guild with the current set
@@ -43,7 +43,7 @@ const rest = new REST({ version: `10` }).setToken(process.env.DISCORD_TOKEN);
         // get rid of any global commands
         // client.application.commands.set([]);
 
-        console.log(`Successfully reloaded ${commands.length} application (/) commands in ${client.guilds.cache.size} guilds.`);
+        console.log(`Successfully reloaded ${ commands.length } application (/) commands in ${ client.guilds.cache.size } guilds.`);
 
         client.destroy();
         // console.log(`Logged out ${client.user.tag}`);

@@ -14,7 +14,7 @@ export const data = new SlashCommandBuilder()
 
 export const execute = async (interaction: ChatInputCommandInteraction) => {
     const userUseCache = interaction.options.getBoolean(`use_cache`);
-    console.log(`userUseCache is ${userUseCache}`);
+    console.log(`userUseCache is ${ userUseCache }`);
     // userUseCache might be null but we only care if it's false
     if (userUseCache === false && !interaction.memberPermissions.has(PermissionsBitField.Flags.ManageGuild)) {
         await interaction.reply({
@@ -39,7 +39,13 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
 
     try {
         // fetch the leaderboard; only use the user cache option if it's explicitly set
-        const leaderboardResponse = await leaderboardLib.getMonthlyLeaderboardData(leaderboardLib.LeaderboardType.Heir, interaction.guild, userUseCache === null ? true : userUseCache);
+        const leaderboardResponse = await leaderboardLib.getMonthlyLeaderboardData(
+            leaderboardLib.LeaderboardType.Heir,
+            interaction.guild,
+            userUseCache === null ? true : userUseCache,
+            DateTime.utc().toFormat(`LL`),
+            DateTime.utc().toFormat(`y`),
+            interaction.user);
         const storedLastfmUsers = await mongodbInternal.getAllUsers();
 
         // give the current top streamer the Monthly Streaming Heir role
@@ -54,11 +60,23 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
             .setTitle(`Monthly Streaming Heir Leaderboard - ${ DateTime.utc().toLocaleString({ year: `numeric`, month: `long` }) }`)
             .setDescription(leaderboardResponse.description);
 
+        let footerText = ``;
+
+        // let users know why they may have 0 streams
+        if (leaderboardResponse.noStreamsForThisUser) {
+            footerText += `Streams not showing up? Make sure they appear on https://last.fm/ and make sure you have streamed music by other artists! You have to stream at least as many songs by other artists as Interlucid for your streams to count on the leaderboard.\n\n`;
+        }
+
         // let users know about the cache if they utilize it
         if (!leaderboardResponse.cacheExpired) {
+            footerText += `Data not updating? Results are cached for five minutes to reduce load on Last.fm API.\n\n`;
+        }
+
+        // Discord.js gets mad if you try to make the footer an empty string
+        if (footerText.length > 0) {
             replyEmbed
                 .setFooter({
-                    text: `Data not updating? Results are cached for five minutes to reduce load on Last.fm API.`,
+                    text: footerText,
                 });
         }
 

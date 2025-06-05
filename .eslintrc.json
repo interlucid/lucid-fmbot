@@ -35,6 +35,7 @@
 		"linebreak-style": ["error", "unix"],
 		"max-nested-callbacks": ["error", { "max": 4 }],
 		"max-statements-per-line": ["error", { "max": 2 }],
+		"multiline-ternary": ["error", "always-multiline"],
 		"no-console": "off",
 		"no-empty-function": "error",
 		"no-floating-decimal": "error",
@@ -47,6 +48,7 @@
 		"no-trailing-spaces": ["error"],
 		"no-var": "error",
 		"object-curly-spacing": ["error", "always"],
+		"operator-linebreak": ["error", "before"],
 		"prefer-const": "error",
 		"quotes": ["error", "backtick"],
 		"semi": ["error", "always"],
@@ -60,6 +62,7 @@
 		"space-infix-ops": "error",
 		"space-unary-ops": "error",
 		"spaced-comment": "error",
+		"template-curly-spacing": ["error", "always"],
 		"yoda": "error"
 	}
 }

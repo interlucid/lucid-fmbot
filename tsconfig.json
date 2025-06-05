@@ -5,6 +5,7 @@
     //     "esm": true,
     // },
     "compilerOptions": {
+        "lib": ["ES2023"],
         "module": "ES2022",
         "moduleResolution": "node",
         "target": "ES2015",

@@ -19,7 +19,7 @@ for (const commandImport of Object.values(commandImports)) {
 // We use 'c' for the event parameter to keep it separate from the already defined 'client'
 client.once(Events.ClientReady, async () => {
     try {
-        console.log(`Ready! Logged in as ${client.user.tag}`);
+        console.log(`Ready! Logged in as ${ client.user.tag }`);
         mongodbInternal.dbInit();
         cronInternal.startCurrentMonthUpdateJob(client);
         cronInternal.startLastMonthFinalCountJob(client);
@@ -34,14 +34,14 @@ client.on(Events.InteractionCreate, async interaction => {
     const command = commands.get(interaction.commandName);
 
     if (!command) {
-        console.error(`No command matching ${interaction.commandName} was found.`);
+        console.error(`No command matching ${ interaction.commandName } was found.`);
         return;
     }
 
     try {
         await command.execute(interaction);
     } catch (error) {
-        console.error(`Error executing "/${interaction.commandName}" command`);
+        console.error(`Error executing "/${ interaction.commandName }" command`);
         console.error(error);
     }
 });

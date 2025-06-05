@@ -37,7 +37,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
         .setDescription(`Queued announcement post...this may take a bit so we don't run into rate limit issues with Last.fm ⏳`);
 
     const leaderboardType = leaderboardChoiceMap[interaction.options.getString(`leaderboard_type`)];
-    console.log(`leaderboardType is ${leaderboardType}`);
+    console.log(`leaderboardType is ${ leaderboardType }`);
 
     await interaction.reply({
         embeds: [
@@ -57,8 +57,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
                 replyEmbed,
             ],
         });
-    }
-    catch (e) {
+    } catch (e) {
         replyEmbed
             .setDescription(`There was an error making an announcement leaderboard post.`);
         await interaction.editReply({

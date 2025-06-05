@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 
 import * as announce from './announce';
 import * as config from './config';
+import * as help from './help';
 import * as login from './login';
 import * as leaderboard from './leaderboard';
 
@@ -13,6 +14,7 @@ export interface CommandImport {
 export const commandImports: CommandImport[] = [
     announce,
     config,
+    help,
     login,
     leaderboard,
 ];
